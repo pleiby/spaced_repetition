@@ -1,0 +1,829 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tiny‑SRS — single‑file, offline spaced‑repetition</title>
+  <style>
+    /* === CSS CUSTOM PROPERTIES (Design System) === */
+    /* Dark theme color palette for the spaced repetition interface */
+    :root {
+      --bg: #0b1020;        /* Main background - deep blue-black */
+      --card:#111831;       /* Card backgrounds - slightly lighter blue */
+      --muted:#9fb0d0;      /* Secondary text color - muted blue-gray */
+      --text:#eef3ff;       /* Primary text - near white with blue tint */
+      --accent:#8ab4ff;     /* Links and accents - bright blue */
+      --ok:#4cd964;         /* Success/good states - green */
+      --warn:#ffd666;       /* Warning states - yellow */
+      --bad:#ff7b72;        /* Error/again states - red */
+    }
+    
+    /* === BASE LAYOUT === */
+    /* Full height layout to center content properly */
+    html, body { height: 100%; }
+    
+    /* Main body styling with system fonts and dark theme */
+    body { 
+      margin: 0; 
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; 
+      background: var(--bg); 
+      color: var(--text); 
+    }
+    
+    /* === LAYOUT COMPONENTS === */
+    /* Main content wrapper - centered with max width for readability */
+    .wrap { 
+      max-width: 900px; 
+      margin: 20px auto 60px; 
+      padding: 0 16px; 
+    }
+    
+    /* Header with flexible layout for title and controls */
+    header { 
+      display: flex; 
+      gap: 12px; 
+      align-items: center; 
+      flex-wrap: wrap; 
+    }
+    
+    /* Responsive title that scales with viewport */
+    h1 { 
+      font-size: clamp(20px, 4vw, 28px); 
+      margin: 8px 0; 
+      letter-spacing: 0.3px; 
+    }
+    
+    /* Card component - primary container for content sections */
+    /* Uses subtle gradient and shadow for depth */
+    .card { 
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); 
+      border: 1px solid #1d294f; 
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25); 
+      border-radius: 18px; 
+      padding: 24px; 
+      margin-top: 14px; 
+    }
+    
+    /* === LAYOUT UTILITIES === */
+    /* Horizontal flex container for arranging elements in a row */
+    .row { 
+      display: flex; 
+      gap: 12px; 
+      align-items: center; 
+      flex-wrap: wrap; 
+    }
+    
+    /* Flexbox utility to make an element expand to fill available space */
+    .grow { 
+      flex: 1 1 auto; 
+    }
+    
+    /* === UI COMPONENTS === */
+    /* Pill-shaped container for settings and status indicators */
+    .pill { 
+      background: #0e1530; 
+      border: 1px solid #203066; 
+      padding: 8px 12px; 
+      border-radius: 12px; 
+      color: var(--muted); 
+    }
+    
+    /* Primary button component with interactive states */
+    .btn { 
+      cursor: pointer; 
+      border: 1px solid #2a3a72; 
+      background: #12204a; 
+      color: var(--text); 
+      padding: 10px 14px; 
+      border-radius: 12px; 
+      font-weight: 600; 
+      transition: transform .02s ease, background .2s ease, border-color .2s ease; 
+    }
+    
+    /* Button hover effect - lighter background and border */
+    .btn:hover { 
+      background: #16285a; 
+      border-color: #3956b6; 
+    }
+    
+    /* Button active/pressed state - slight downward movement */
+    .btn:active { 
+      transform: translateY(1px); 
+    }
+    
+    /* === BUTTON VARIANTS === */
+    /* Study session grading buttons with semantic colors */
+    .btn.good { 
+      border-color: #2f7b3a; 
+      background: #12311a; 
+    } /* Green for "Good" grade */
+    
+    .btn.hard { 
+      border-color: #8d6b1a; 
+      background: #2a220c; 
+    } /* Yellow/orange for "Hard" grade */
+    
+    .btn.again { 
+      border-color: #90313a; 
+      background: #3b1216; 
+    } /* Red for "Again" grade (failed) */
+    
+    .btn.easy { 
+      border-color: #2a6fb2; 
+      background: #0e2742; 
+    } /* Blue for "Easy" grade */
+    
+    /* Smaller button variant for secondary actions */
+    .btn.small { 
+      padding: 6px 10px; 
+      font-weight: 500; 
+    }
+    
+    /* Keyboard shortcut indicator styling */
+    .kbd { 
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; 
+      background: #0e1530; 
+      border: 1px solid #25356d; 
+      padding: 0 6px; 
+      border-radius: 6px; 
+    }
+    
+    /* === TYPOGRAPHY & CONTENT === */
+    /* Metadata text styling for secondary information */
+    .meta { 
+      color: var(--muted); 
+      font-size: 14px; 
+    }
+    
+    /* Study card question/cue text - large and prominent */
+    .cue { 
+      font-size: clamp(20px, 4vw, 28px); 
+      line-height: 1.35; 
+    }
+    
+    /* Study card answer text with visual separator */
+    .answer { 
+      font-size: clamp(18px, 3.5vw, 24px); 
+      line-height: 1.4; 
+      border-left: 3px solid #284899; /* Blue accent border */
+      padding-left: 12px; 
+      margin-top: 14px; 
+      white-space: pre-wrap; /* Preserve formatting from CSV */
+    }
+    
+    /* Hide/reveal animation using blur effect */
+    .hidden { 
+      filter: blur(10px); 
+    }
+    
+    /* Collapsible details section styling */
+    details { 
+      border: 1px dashed #2a3a72; 
+      padding: 12px; 
+      border-radius: 12px; 
+    }
+    
+    /* Clickable summary for details */
+    summary { 
+      cursor: pointer; 
+    }
+    
+    /* Checkbox alignment fix */
+    input[type="checkbox"] { 
+      transform: translateY(1px); 
+    }
+    
+    /* Utility class for muted text */
+    .muted { 
+      color: var(--muted); 
+    }
+    
+    /* === RESPONSIVE GRID === */
+    /* Two-column grid layout for larger screens */
+    .grid { 
+      display: grid; 
+      grid-template-columns: repeat(2, minmax(0,1fr)); 
+      gap: 10px; 
+    }
+    
+    /* Single column on mobile devices */
+    @media (max-width: 640px) { 
+      .grid { 
+        grid-template-columns: 1fr; 
+      } 
+    }
+    
+    /* === FOOTER === */
+    /* Fixed footer with privacy message */
+    footer { 
+      position: fixed; 
+      bottom: 8px; 
+      left: 0; 
+      right: 0; 
+      display: flex; 
+      justify-content: center; 
+      pointer-events: none; /* Allow clicks to pass through */
+    }
+    
+    /* Privacy hint bubble in footer */
+    footer .hint { 
+      background: #0d1330; 
+      border: 1px solid #21316a; 
+      color: #b8c7ea; 
+      padding: 8px 12px; 
+      border-radius: 999px; 
+      font-size: 12px; 
+      pointer-events: auto; /* Re-enable clicks on hint */
+    }
+    
+    /* Link styling */
+    a { 
+      color: var(--accent); 
+      text-decoration: none; 
+    }
+  </style>
+</head>
+<body>
+<!-- 
+=== TINY-SRS HTML STRUCTURE ===
+This single-file application contains:
+1. Header with title and main action buttons
+2. About/instructions card (shown by default)
+3. Status card (shown after loading a deck)
+4. Study card (shown during review sessions)
+5. Tips card (contextual help during study)
+6. Footer with privacy message
+-->
+
+<div class="wrap">
+  <!-- === HEADER SECTION === -->
+  <!-- Contains app title and primary action buttons -->
+  <header class="row">
+    <h1 class="grow">Tiny‑SRS <span class="muted">(offline spaced‑repetition)</span></h1>
+    <!-- File input button for loading CSV decks -->
+    <label class="btn small">
+      Load CSV deck<input id="file" type="file" accept=".csv,text/csv" hidden>
+    </label>
+    <!-- Export button for backing up study progress -->
+    <button class="btn small" id="export">Export progress</button>
+  </header>
+
+  <!-- === ABOUT/INSTRUCTIONS CARD === -->
+  <!-- Initial view with usage instructions and settings -->
+  <div class="card" id="about">
+    <div class="meta">Open a CSV with columns <strong>cue</strong>, <strong>answer</strong> (headers optional). Everything runs locally: no servers, no tracking, no internet.</div>
+    
+    <!-- Settings checkboxes for configuring study behavior -->
+    <div class="row" style="margin-top:10px; gap:8px;">
+      <!-- Fast mode: accelerates time for testing/demo purposes -->
+      <label class="pill"><input type="checkbox" id="fast" checked> Fast mode: treat 1 day as 1 minute</label>
+      <!-- Shuffle: randomizes card order on import -->
+      <label class="pill"><input type="checkbox" id="shuffle" checked> Shuffle on import</label>
+      <!-- Auto-reveal: automatically shows answers for frequently seen cards -->
+      <label class="pill"><input type="checkbox" id="autoshow"> Auto‑reveal on repeat (>2x)</label>
+    </div>
+    
+    <!-- Collapsible help section with keyboard shortcuts and algorithm info -->
+    <details style="margin-top:10px;">
+      <summary>Keyboard & grading</summary>
+      <div class="meta" style="margin-top:8px;">
+        <div class="grid">
+          <!-- Keyboard shortcuts for study navigation -->
+          <div>Reveal/hide answer: <span class="kbd">Space</span> · Next due: <span class="kbd">Enter</span> · Suspend card: <span class="kbd">s</span></div>
+          <!-- Grading shortcuts (1-4 scale) -->
+          <div>Grades — Again: <span class="kbd">1</span> · Hard: <span class="kbd">2</span> · Good: <span class="kbd">3</span> · Easy: <span class="kbd">4</span></div>
+        </div>
+        <!-- Algorithm explanation -->
+        <p>Scheduling uses an SM‑2‑style algorithm with per‑card ease factor, interval, and due time. "Fast mode" makes days ≈ minutes so you can experience spacing within a study session.</p>
+      </div>
+    </details>
+  </div>
+
+  <!-- === STATUS/DECK OVERVIEW CARD === -->
+  <!-- Shown after loading a deck, displays statistics and review options -->
+  <div class="card" id="status" style="display:none">
+    <div class="row">
+      <div class="grow">
+        <!-- Deck name and hash identifier -->
+        <div class="meta">Deck: <strong id="deckName">—</strong></div>
+        <!-- Card count statistics broken down by status -->
+        <div class="meta">Due now: <span id="dueNow">0</span> · Future: <span id="dueLater">0</span> · Suspended: <span id="suspended">0</span> · Total: <span id="total">0</span></div>
+      </div>
+      <div class="row">
+        <!-- Study mode buttons -->
+        <button class="btn small" id="reviewNow">Review due</button>  <!-- Only cards due now -->
+        <button class="btn small" id="reviewAll">Cram all</button>     <!-- All cards regardless of due time -->
+        <button class="btn small" id="resetEase">Reset ease</button>   <!-- Reset all progress data -->
+      </div>
+    </div>
+  </div>
+
+  <!-- === STUDY SESSION CARD === -->
+  <!-- Main interface for reviewing flashcards -->
+  <div class="card" id="study" style="display:none">
+    <!-- Study session metadata: progress, card stats, algorithm data -->
+    <div class="meta" id="metaTop">Card 0/0 · Reviews: 0 · Ease: — · Interval: —</div>
+    
+    <!-- Question/prompt text (always visible) -->
+    <div class="cue" id="cue">—</div>
+    
+    <!-- Answer text (hidden until revealed) -->
+    <div class="answer hidden" id="answer">—</div>
+
+    <div class="row" style="margin-top:16px; gap:8px;">
+      <!-- Reveal button to show/hide answer -->
+      <button class="btn" id="reveal">Reveal <span class="kbd">Space</span></button>
+      <div class="grow"></div>
+      
+      <!-- Grading buttons for self-assessment -->
+      <!-- Grade 1: Complete failure, reset to beginning -->
+      <button class="btn again" id="g1" title="Again (grade 1)">Again (1)</button>
+      <!-- Grade 2: Difficult recall, shorter interval -->
+      <button class="btn hard" id="g2" title="Hard (grade 2)">Hard (2)</button>
+      <!-- Grade 3: Normal recall, standard interval progression -->
+      <button class="btn good" id="g3" title="Good (grade 3)">Good (3)</button>
+      <!-- Grade 4: Easy recall, longer interval and higher ease -->
+      <button class="btn easy" id="g4" title="Easy (grade 4)">Easy (4)</button>
+    </div>
+  </div>
+
+  <!-- === CONTEXTUAL TIPS CARD === -->
+  <!-- Shown during study sessions with helpful reminders -->
+  <div class="card" id="tips" style="display:none">
+    <div class="meta">Tip: If you prefer manual scoring, press <span class="kbd">Space</span> to reveal, judge yourself, then hit <span class="kbd">1–4</span>. You can close and reopen this file anytime—your progress is saved in your browser's localStorage under a hash of your CSV contents.</div>
+  </div>
+</div>
+
+<!-- === FOOTER === -->
+<!-- Fixed footer emphasizing privacy and offline nature -->
+<footer>
+  <div class="hint">Privacy‑first: this is a single HTML file; your deck and progress never leave your machine.</div>
+</footer>
+
+<script>
+// =============== UTILITIES ===============
+// Core utility functions used throughout the application
+
+// Shorthand for document.querySelector - makes DOM manipulation cleaner
+const $ = sel => document.querySelector(sel);
+
+// Time-related constants and helpers
+const now = () => Date.now(); // Current timestamp in milliseconds
+const minute = 60*1000;       // Milliseconds in a minute
+const day = 24*60*minute;     // Milliseconds in a day
+
+// Simple hash function (DJB2) for generating deck identifiers from CSV content
+// This creates a unique ID for each deck based on its content
+const djb2 = str => { 
+  let h=5381; 
+  for (let i=0;i<str.length;i++) h=((h<<5)+h) + str.charCodeAt(i); 
+  return (h>>>0).toString(16); 
+};
+
+// Utility to constrain values between min and max bounds
+const clamp = (x,a,b)=>Math.max(a,Math.min(b,x));
+
+// Promise-based sleep function for adding delays
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+
+// =============== CSV PARSING ===============
+// Robust CSV parser that handles quotes, escaped quotes, and various formats
+function parseCSV(text){
+  // Returns array of objects using first row as headers if alphanumeric headers detected
+  const rows=[]; 
+  let i=0, field=''; 
+  let inQ=false; // Track if we're inside quoted field
+  let row=[];
+  
+  // Helper functions for building the data structure
+  function pushField(){ row.push(field); field=''; }
+  function pushRow(){ rows.push(row); row=[]; }
+  
+  // Character-by-character parsing to handle CSV complexities
+  while(i<text.length){ 
+    const c=text[i++];
+    if(inQ){ 
+      // Inside quoted field - handle escaped quotes
+      if(c==='"'){ 
+        if(text[i]==='"'){ 
+          field+='"'; i++; // Escaped quote
+        } else inQ=false; // End of quoted field
+      }
+      else field+=c; 
+    }
+    else {
+      // Outside quotes - handle delimiters and newlines
+      if(c==='"'){ inQ=true; }
+      else if(c===','){ pushField(); }
+      else if(c==='\n'){ pushField(); pushRow(); }
+      else if(c==='\r'){ /* skip carriage return */ }
+      else field+=c;
+    }
+  }
+  
+  // Handle final field/row if file doesn't end with newline
+  if(field.length||row.length){ pushField(); pushRow(); }
+  if(rows.length===0) return [];
+  
+  // Detect if first row contains headers vs data
+  const headersCandidate = rows[0].map(x => x.trim().toLowerCase());
+  const looksLikeHeaders = headersCandidate.some(h => 
+    ['cue','question','front','answer','back'].includes(h)
+  );
+  
+  let headers;
+  if(looksLikeHeaders){ 
+    headers = headersCandidate; 
+    rows.shift(); // Remove header row from data
+  }
+  else { 
+    headers=['cue','answer']; // Default column names
+  }
+  
+  // Normalize column names to standard 'cue' and 'answer' format
+  return rows.filter(r=>r.some(x=>x&&x.trim().length)).map(r=>{
+    const obj={cue:'', answer:''};
+    for(let j=0;j<r.length;j++){
+      const h=(headers[j]||'').toLowerCase();
+      // Map various question column names to 'cue'
+      if(['cue','question','front','q','prompt'].includes(h)) obj.cue=r[j]||'';
+      // Map various answer column names to 'answer'
+      if(['answer','back','a','response','resp'].includes(h)) obj.answer=r[j]||'';
+    }
+    // Fallback: use first two columns if no standard headers found
+    if(obj.cue==='' && r[0]) obj.cue=r[0];
+    if(obj.answer==='' && r[1]) obj.answer=r[1];
+    return obj;
+  });
+}
+
+// =============== TIME FORMATTING ===============
+// Convert milliseconds to human-readable time format
+function fmtTime(ms){ 
+  const s=Math.round(ms/1000); 
+  if(s<60) return s+"s"; 
+  const m=Math.round(s/60); 
+  if(m<90) return m+"m"; 
+  const h=Math.round(m/60); 
+  if(h<48) return h+"h"; 
+  const d=Math.round(h/24); 
+  return d+"d"; 
+}
+
+// =============== PERSISTENCE & STATE MANAGEMENT ===============
+// Global application state
+let state = { 
+  deckKey:null,    // Unique identifier for the current deck
+  name:'',         // Deck filename  
+  cards:[],        // Array of card objects with study data
+  i:0,             // Current card index (unused in current implementation)
+  cram:false,      // Whether we're in "cram all" mode vs "review due"
+  fast:true,       // Fast mode: days become minutes for testing
+  autoshow:false   // Auto-reveal answers for frequently seen cards
+};
+
+// Load saved progress from browser localStorage
+function loadProgress(key){ 
+  try{ 
+    return JSON.parse(localStorage.getItem('tinySRS:'+key))||{} 
+  }catch(e){ 
+    return {}; 
+  } 
+}
+
+// Save current progress to localStorage
+function saveProgress(){ 
+  if(!state.deckKey) return; 
+  localStorage.setItem('tinySRS:'+state.deckKey, JSON.stringify({ 
+    name:state.name, 
+    cards:state.cards 
+  })); 
+}
+
+// =============== CARD DATA STRUCTURE ===============
+// Convert CSV rows to card objects with spaced repetition metadata
+function buildCards(rows){
+  const fast = state.fast;
+  const t = now();
+  return rows.map((r, idx)=>({
+    id: idx,                                    // Sequential card ID
+    cue: r.cue?.trim()||'',                    // Question/prompt text
+    answer: r.answer?.trim()||'',              // Answer text
+    n: 0,                                      // Number of successful reviews
+    ef: 2.5,                                   // Ease factor (SM-2 algorithm)
+    ivl: fast ? minute : day,                  // Next review interval
+    due: t,                                    // When card is due for review
+    lapses: 0,                                 // Number of times forgotten
+    suspended: false                           // Whether card is temporarily disabled
+  })).filter(c=>c.cue||c.answer);             // Remove empty cards
+}
+
+// =============== PROGRESS MERGING ===============
+// Merge newly imported cards with existing progress data
+function mergeProgress(existing, saved){
+  if(!saved || !Array.isArray(saved.cards)) return existing;
+  
+  // Create lookup map using cue+answer as unique key
+  const byCue = new Map(existing.map(c=>[c.cue+"\u241F"+c.answer, c]));
+  
+  // Update existing cards with saved progress data
+  for(const s of saved.cards){ 
+    const k=s.cue+"\u241F"+s.answer; 
+    const c=byCue.get(k); 
+    if(c){ 
+      // Merge saved study data into card
+      Object.assign(c, {
+        n:s.n||0, 
+        ef:s.ef||2.5, 
+        ivl:s.ivl||c.ivl, 
+        due:s.due||c.due, 
+        lapses:s.lapses||0, 
+        suspended:!!s.suspended
+      }); 
+    } 
+  }
+  return existing;
+}
+
+// =============== CARD SELECTION LOGIC ===============
+// Find the next card to study based on due time and study mode
+function nextCard(all=false){
+  const t = now();
+  
+  // Find cards that are due now (not suspended)
+  const due = state.cards.filter(c=>!c.suspended && (all || c.due<=t));
+  if(due.length) return due.sort((a,b)=>a.due-b.due)[0]; // Return earliest due
+  
+  // If nothing due, find the next card that will be due
+  const future = state.cards.filter(c=>!c.suspended).sort((a,b)=>a.due-b.due);
+  return future[0]||null;
+}
+
+// =============== SPACED REPETITION ALGORITHM ===============
+// SM-2 based scheduling algorithm with modifications
+function schedule(card, grade){
+  // SM-2 variant with grades 0..4 (buttons 1..4 map to grades 1..4)
+  // Grade interpretation: 1=Again (fail), 2=Hard, 3=Good, 4=Easy
+  
+  let q = clamp(grade, 0, 4);
+  
+  if(q<=1){ 
+    // FAILURE PATH: Grade 1 (Again)
+    // Reset progress and schedule soon with reduced ease
+    card.n = 0;                                    // Reset successful review count
+    card.lapses++;                                 // Increment lapse counter
+    card.ivl = state.fast ? minute : day;          // Reset interval to minimum
+    card.due = now() + card.ivl;                   // Schedule for next review
+    card.ef = Math.max(1.3, card.ef - 0.2);       // Reduce ease factor (min 1.3)
+  } else {
+    // SUCCESS PATH: Grades 2-4 (Hard, Good, Easy)
+    
+    // SM-2 interval progression
+    if(card.n===0){ 
+      // First successful review: 1 day (or 1 minute in fast mode)
+      card.ivl = state.fast ? minute : day; 
+    }
+    else if(card.n===1){ 
+      // Second successful review: 6 days (or 6 minutes in fast mode)
+      card.ivl = (state.fast ? 6*minute : 6*day); 
+    }
+    else { 
+      // Subsequent reviews: multiply previous interval by ease factor
+      card.ivl = Math.round(card.ivl * card.ef); 
+    }
+    
+    // EASE FACTOR UPDATE
+    // Convert grade (1-4) to SM-2 scale (0-5) for ease calculation
+    const q5 = q * 1.25; // Maps 1,2,3,4 to 1.25,2.5,3.75,5
+    
+    // SM-2 ease factor formula: EF' = EF + (0.1 - (5-q)*(0.08 + (5-q)*0.02))
+    card.ef = Math.max(1.3, card.ef + (0.1 - (5 - q5) * (0.08 + (5 - q5) * 0.02)));
+    
+    card.n++;                           // Increment successful review count
+    card.due = now() + card.ivl;        // Schedule next review
+  }
+}
+
+// =============== UI STATE MANAGEMENT ===============
+// Variables for tracking current study session
+let current = null;    // Currently displayed card
+let revealed=false;    // Whether answer is currently shown
+let studyCount=0;      // Number of cards studied in this session
+
+// =============== STATUS DISPLAY ===============
+// Update the deck statistics display
+function updateStatus(){
+  const t = now();
+  const dueNow = state.cards.filter(c=>!c.suspended && c.due<=t).length;
+  const dueLater = state.cards.filter(c=>!c.suspended && c.due>t).length;
+  const suspended = state.cards.filter(c=>c.suspended).length;
+  
+  // Update DOM elements with current statistics
+  $('#dueNow').textContent = dueNow; 
+  $('#dueLater').textContent = dueLater; 
+  $('#suspended').textContent = suspended; 
+  $('#total').textContent = state.cards.length;
+}
+
+// =============== STUDY SESSION UI ===============
+// Display a card for study
+function showCard(card){
+  current = card; 
+  revealed = false; 
+  studyCount++;
+  
+  // Show study interface
+  $('#study').style.display = '';
+  $('#tips').style.display = '';
+  
+  // Populate card content
+  $('#cue').textContent = card.cue || '—';
+  $('#answer').textContent = card.answer || '—';
+  $('#answer').classList.add('hidden'); // Hide answer initially
+  
+  // Update metadata display with card statistics
+  $('#metaTop').textContent = `Card ${studyCount}/${state.cards.length} · Reviews: ${card.n} · Ease: ${card.ef.toFixed(2)} · Interval: ${fmtTime(card.ivl)}`;
+  
+  updateStatus();
+}
+
+// Toggle answer visibility
+function reveal(){ 
+  if(!current) return; 
+  revealed = !revealed; 
+  $('#answer').classList.toggle('hidden', !revealed); 
+}
+
+// =============== GRADING & PROGRESSION ===============
+// Handle user grading and move to next card
+function grade(g){ 
+  if(!current) return; 
+  
+  // Ensure answer is revealed before grading
+  if(!revealed) reveal(); 
+  
+  // Apply spaced repetition algorithm
+  schedule(current, g); 
+  
+  // Save progress to localStorage
+  saveProgress(); 
+  updateStatus(); 
+  
+  // Find and show next card
+  const next = nextCard(state.cram ? true : false); 
+  if(next){ 
+    // Auto-reveal feature: show answer immediately for frequently seen cards
+    const auto = state.autoshow && current.n>2; 
+    showCard(next); 
+    if(auto){ 
+      $('#answer').classList.remove('hidden'); 
+      revealed=true; 
+    } 
+  } 
+}
+
+// =============== EVENT HANDLERS ===============
+// File input handler for loading CSV decks
+$('#file').addEventListener('change', async (e)=>{
+  const file = e.target.files[0]; 
+  if(!file) return;
+  
+  // Parse CSV content
+  const text = await file.text();
+  const rows = parseCSV(text);
+  if(rows.length===0){ 
+    alert('No rows parsed. Expect columns "cue" and "answer" (headers optional).'); 
+    return; 
+  }
+  
+  // Initialize deck state
+  state.name = file.name; 
+  state.deckKey = djb2(text);  // Generate unique deck ID from content
+  state.fast = $('#fast').checked; 
+  state.autoshow=$('#autoshow').checked;
+  
+  // Build initial card data
+  let cards = buildCards(rows);
+  
+  // Optional: shuffle cards if requested
+  if($('#shuffle').checked){ 
+    for(let i=cards.length-1;i>0;i--){ 
+      const j = Math.floor(Math.random()*(i+1)); 
+      [cards[i],cards[j]]=[cards[j],cards[i]]; 
+    } 
+  }
+  
+  // Merge with any existing progress for this deck
+  const saved = loadProgress(state.deckKey);
+  state.cards = mergeProgress(cards, saved);
+  
+  // Update UI
+  $('#deckName').textContent = state.name + ` (key ${state.deckKey.slice(0,6)})`;
+  $('#status').style.display = '';
+  updateStatus();
+  
+  // Start studying if cards are available
+  const c = nextCard(false); 
+  if(c) showCard(c);
+});
+
+// Study mode buttons
+$('#reviewNow').onclick = ()=>{ 
+  state.cram=false; // Only review due cards
+  const c=nextCard(false); 
+  if(c) showCard(c); 
+};
+
+$('#reviewAll').onclick = ()=>{ 
+  state.cram=true; // Review all cards regardless of due time
+  const c=nextCard(true); 
+  if(c) showCard(c); 
+};
+
+// Reset all card progress
+$('#resetEase').onclick = ()=>{
+  if(!confirm('Reset ease & intervals for all cards?')) return;
+  for(const c of state.cards){ 
+    c.n=0; 
+    c.ef=2.5; 
+    c.ivl= state.fast? minute : day; 
+    c.due= now(); 
+    c.lapses=0; 
+    c.suspended=false; 
+  }
+  saveProgress(); 
+  updateStatus(); 
+  alert('Reset complete.');
+};
+
+// Export progress data as JSON
+$('#export').onclick = ()=>{
+  if(!state.deckKey){ 
+    alert('No deck loaded.'); 
+    return; 
+  }
+  const data = JSON.stringify({ 
+    name: state.name, 
+    key: state.deckKey, 
+    exported: new Date().toISOString(), 
+    cards: state.cards 
+  }, null, 2);
+  
+  // Create and trigger download
+  const blob = new Blob([data], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); 
+  a.href = url; 
+  a.download = (state.name||'deck') + '.progress.json'; 
+  a.click(); 
+  URL.revokeObjectURL(url);
+};
+
+// Study interface button handlers
+$('#reveal').onclick = ()=> reveal();
+$('#g1').onclick = ()=> grade(1);  // Again
+$('#g2').onclick = ()=> grade(2);  // Hard  
+$('#g3').onclick = ()=> grade(3);  // Good
+$('#g4').onclick = ()=> grade(4);  // Easy
+
+// =============== KEYBOARD SHORTCUTS ===============
+// Global keyboard event handler for study shortcuts
+window.addEventListener('keydown', (ev)=>{
+  // Only handle keys when study interface is visible
+  if(!$('#study')|| $('#study').style.display==='none') return;
+  
+  const k = ev.key.toLowerCase();
+  
+  // Space: Toggle answer visibility
+  if(k===' '){ 
+    ev.preventDefault(); 
+    reveal(); 
+  }
+  
+  // Enter: Move to next due card
+  if(k==='enter'){ 
+    ev.preventDefault(); 
+    const c= nextCard(state.cram?true:false); 
+    if(c) showCard(c); 
+  }
+  
+  // Number keys 1-4: Grade current card
+  if(k==='1'){ grade(1); } // Again
+  if(k==='2'){ grade(2); } // Hard
+  if(k==='3'){ grade(3); } // Good
+  if(k==='4'){ grade(4); } // Easy
+  
+  // 's': Suspend/unsuspend current card
+  if(k==='s'){ 
+    if(current){ 
+      current.suspended=!current.suspended; 
+      saveProgress(); 
+      updateStatus(); 
+      const c=nextCard(state.cram?true:false); 
+      if(c) showCard(c); 
+    } 
+  }
+});
+</script>
+</body>
+</html>

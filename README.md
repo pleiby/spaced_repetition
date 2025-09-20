@@ -93,6 +93,11 @@ The application uses a modified **SM-2 algorithm** that adjusts review intervals
 - **Grade 3 (Good)**: Normal recall → Standard interval progression
 - **Grade 4 (Easy)**: Effortless recall → Longer interval, increased ease
 
+### Reverse Mode
+- **Bidirectional Study**: Toggle "Reverse cards" to show answers first and test recall of questions
+- **Same Statistics**: Card progress remains unchanged when switching directions - both forward and reverse test the same memory association
+- **Perfect for Languages**: Test "Bonjour → Hello" and "Hello → Bonjour" using the same card data
+
 ### Scheduling Logic
 1. **First review**: 1 day (or 1 minute in fast mode)
 2. **Second review**: 6 days (or 6 minutes in fast mode)

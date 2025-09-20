@@ -283,6 +283,8 @@ This single-file application contains:
       <label class="pill"><input type="checkbox" id="shuffle" checked> Shuffle on import</label>
       <!-- Auto-reveal: automatically shows answers for frequently seen cards -->
       <label class="pill"><input type="checkbox" id="autoshow"> Auto‑reveal on repeat (>2x)</label>
+      <!-- Reverse cards: show back first to test recall of front -->
+      <label class="pill"><input type="checkbox" id="reverse"> Reverse cards (show answer → guess question)</label>
     </div>
     
     <!-- Collapsible help section with keyboard shortcuts and algorithm info -->
@@ -638,13 +640,29 @@ function showCard(card){
   $('#study').style.display = '';
   $('#tips').style.display = '';
   
-  // Populate card content
-  $('#cue').textContent = card.cue || '—';
-  $('#answer').textContent = card.answer || '—';
+  // Check if reverse mode is enabled
+  const reverseMode = $('#reverse').checked;
+  
+  // Populate card content (swap cue/answer in reverse mode)
+  if(reverseMode) {
+    $('#cue').textContent = card.answer || '—';
+    $('#answer').textContent = card.cue || '—';
+  } else {
+    $('#cue').textContent = card.cue || '—';
+    $('#answer').textContent = card.answer || '—';
+  }
   $('#answer').classList.add('hidden'); // Hide answer initially
   
-  // Update metadata display with card statistics
-  $('#metaTop').textContent = `Card ${studyCount}/${state.cards.length} · Reviews: ${card.n} · Ease: ${card.ef.toFixed(2)} · Interval: ${fmtTime(card.ivl)}`;
+  // Update reveal button text to reflect current mode
+  if(reverseMode) {
+    $('#reveal').innerHTML = 'Reveal Question <span class="kbd">Space</span>';
+  } else {
+    $('#reveal').innerHTML = 'Reveal Answer <span class="kbd">Space</span>';
+  }
+  
+  // Update metadata display with card statistics and mode indicator
+  const modeIndicator = reverseMode ? ' · [REVERSE]' : '';
+  $('#metaTop').textContent = `Card ${studyCount}/${state.cards.length} · Reviews: ${card.n} · Ease: ${card.ef.toFixed(2)} · Interval: ${fmtTime(card.ivl)}${modeIndicator}`;
   
   updateStatus();
 }

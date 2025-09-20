@@ -241,6 +241,47 @@
       color: var(--accent); 
       text-decoration: none; 
     }
+
+    /* === ADD CARD MODAL STYLES === */
+    /* Modal styling for add card form */
+    #addCardModal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 1000;
+      min-width: 400px;
+      max-width: 90vw;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+    
+    /* Textarea styling for modal inputs */
+    #addCardModal textarea {
+      font-size: 14px;
+      line-height: 1.4;
+      min-height: 60px;
+    }
+    
+    /* Focus states for modal inputs */
+    #addCardModal textarea:focus {
+      outline: none;
+      border-color: #4285f4;
+      box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
+    }
+    
+    /* Modal backdrop when shown */
+    #addCardModal::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: -1;
+    }
   </style>
 </head>
 <body>
@@ -317,6 +358,7 @@ This single-file application contains:
         <!-- Study mode buttons -->
         <button class="btn small" id="reviewNow">Review due</button>  <!-- Only cards due now -->
         <button class="btn small" id="reviewAll">Cram all</button>     <!-- All cards regardless of due time -->
+        <button class="btn small" id="addCard">+ Add Card</button>    <!-- Add new cards to deck -->
         <button class="btn small" id="resetEase">Reset ease</button>   <!-- Reset all progress data -->
       </div>
     </div>
@@ -355,6 +397,31 @@ This single-file application contains:
   <!-- Shown during study sessions with helpful reminders -->
   <div class="card" id="tips" style="display:none">
     <div class="meta">Tip: If you prefer manual scoring, press <span class="kbd">Space</span> to reveal, judge yourself, then hit <span class="kbd">1–4</span>. You can close and reopen this file anytime—your progress is saved in your browser's localStorage under a hash of your CSV contents.</div>
+  </div>
+</div>
+
+<!-- === ADD CARD MODAL === -->
+<!-- Modal for adding new cards to the current deck -->
+<div class="card" id="addCardModal" style="display:none">
+  <div class="row" style="margin-bottom: 16px;">
+    <h3 class="grow">Add New Card</h3>
+    <button class="btn small" id="cancelAddCard">Cancel</button>
+  </div>
+  
+  <div style="margin-bottom: 12px;">
+    <label for="newCue" style="display: block; margin-bottom: 4px; font-weight: bold;">Question/Cue:</label>
+    <textarea id="newCue" placeholder="Enter the question, term, or cue..." style="width: 100%; height: 60px; padding: 8px; border: 2px solid #1d294f; border-radius: 8px; background: #0a1428; color: #e8eaed; font-family: inherit; resize: vertical;"></textarea>
+  </div>
+  
+  <div style="margin-bottom: 16px;">
+    <label for="newAnswer" style="display: block; margin-bottom: 4px; font-weight: bold;">Answer/Response:</label>
+    <textarea id="newAnswer" placeholder="Enter the answer, definition, or response..." style="width: 100%; height: 60px; padding: 8px; border: 2px solid #1d294f; border-radius: 8px; background: #0a1428; color: #e8eaed; font-family: inherit; resize: vertical;"></textarea>
+  </div>
+  
+  <div class="row">
+    <button class="btn" id="saveNewCard">Add Card</button>
+    <div class="grow"></div>
+    <div class="meta">New cards start with fresh spaced repetition scheduling</div>
   </div>
 </div>
 
@@ -549,6 +616,56 @@ function mergeProgress(existing, saved){
   return existing;
 }
 
+// =============== USER CARD MANAGEMENT ===============
+// Load user-added cards for the current deck
+function loadUserCards(baseDeckKey){
+  try{
+    const stored = localStorage.getItem('tinySRS:userCards_' + baseDeckKey);
+    return stored ? JSON.parse(stored) : [];
+  }catch(e){
+    return [];
+  }
+}
+
+// Save user-added cards
+function saveUserCards(baseDeckKey, userCards){
+  localStorage.setItem('tinySRS:userCards_' + baseDeckKey, JSON.stringify(userCards));
+}
+
+// Add a new card to the current deck
+function addUserCard(cue, answer){
+  if(!state.deckKey) return false;
+  if(!cue.trim() || !answer.trim()) return false;
+  
+  // Create new card with unique ID
+  const newCard = {
+    id: 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+    cue: cue.trim(),
+    answer: answer.trim(),
+    n: 0,
+    ef: 2.5,
+    ivl: state.fast ? minute : day,
+    due: now(),
+    lapses: 0,
+    suspended: false,
+    userAdded: true  // Mark as user-created
+  };
+  
+  // Add to current deck
+  state.cards.push(newCard);
+  
+  // Save to separate user cards storage
+  const userCards = loadUserCards(state.deckKey);
+  userCards.push(newCard);
+  saveUserCards(state.deckKey, userCards);
+  
+  // Update regular progress save
+  saveProgress();
+  updateStatus();
+  
+  return true;
+}
+
 // =============== CARD SELECTION LOGIC ===============
 // Find the next card to study based on due time and study mode
 function nextCard(all=false){
@@ -621,12 +738,19 @@ function updateStatus(){
   const dueNow = state.cards.filter(c=>!c.suspended && c.due<=t).length;
   const dueLater = state.cards.filter(c=>!c.suspended && c.due>t).length;
   const suspended = state.cards.filter(c=>c.suspended).length;
+  const userAdded = state.cards.filter(c=>c.userAdded).length;
   
   // Update DOM elements with current statistics
   $('#dueNow').textContent = dueNow; 
   $('#dueLater').textContent = dueLater; 
   $('#suspended').textContent = suspended; 
-  $('#total').textContent = state.cards.length;
+  
+  // Show total with user-added count if any exist
+  if(userAdded > 0){
+    $('#total').textContent = `${state.cards.length} (${userAdded} added)`;
+  } else {
+    $('#total').textContent = state.cards.length;
+  }
 }
 
 // =============== STUDY SESSION UI ===============
@@ -742,10 +866,16 @@ $('#file').addEventListener('change', async (e)=>{
   state.fast = $('#fast').checked; 
   state.autoshow=$('#autoshow').checked;
   
-  // Build initial card data
+  // Build initial card data from imported CSV
   let cards = buildCards(rows);
   
-  // Optional: shuffle cards if requested
+  // Load any user-added cards for this deck
+  const userCards = loadUserCards(state.deckKey);
+  
+  // Combine imported cards with user-added cards
+  cards = [...cards, ...userCards];
+  
+  // Optional: shuffle cards if requested (but keep user cards mixed in)
   if($('#shuffle').checked){ 
     for(let i=cards.length-1;i>0;i--){ 
       const j = Math.floor(Math.random()*(i+1)); 
@@ -797,6 +927,58 @@ $('#resetEase').onclick = ()=>{
   alert('Reset complete.');
 };
 
+// Add new card functionality
+$('#addCard').onclick = ()=>{
+  if(!state.deckKey){
+    alert('Please load a deck first.');
+    return;
+  }
+  // Show the add card modal
+  $('#addCardModal').style.display = '';
+  $('#newCue').focus();
+  // Clear any previous values
+  $('#newCue').value = '';
+  $('#newAnswer').value = '';
+};
+
+// Cancel add card
+$('#cancelAddCard').onclick = ()=>{
+  $('#addCardModal').style.display = 'none';
+};
+
+// Save new card
+$('#saveNewCard').onclick = ()=>{
+  const cue = $('#newCue').value.trim();
+  const answer = $('#newAnswer').value.trim();
+  
+  if(!cue || !answer){
+    alert('Please enter both a question and answer.');
+    return;
+  }
+  
+  // Check for duplicates
+  const exists = state.cards.some(c => 
+    c.cue.toLowerCase() === cue.toLowerCase() && 
+    c.answer.toLowerCase() === answer.toLowerCase()
+  );
+  
+  if(exists){
+    alert('A card with this question and answer already exists.');
+    return;
+  }
+  
+  // Add the card
+  if(addUserCard(cue, answer)){
+    alert('Card added successfully!');
+    $('#addCardModal').style.display = 'none';
+    // Clear the form
+    $('#newCue').value = '';
+    $('#newAnswer').value = '';
+  } else {
+    alert('Failed to add card. Please try again.');
+  }
+};
+
 // Export progress data as JSON
 $('#export').onclick = ()=>{
   if(!state.deckKey){ 
@@ -845,10 +1027,26 @@ $('#g4').onclick = ()=> grade(4);  // Easy
 // =============== KEYBOARD SHORTCUTS ===============
 // Global keyboard event handler for study shortcuts
 window.addEventListener('keydown', (ev)=>{
-  // Only handle keys when study interface is visible
-  if(!$('#study')|| $('#study').style.display==='none') return;
-  
   const k = ev.key.toLowerCase();
+  
+  // Handle add card modal shortcuts
+  if($('#addCardModal').style.display !== 'none'){
+    if(k === 'escape'){
+      ev.preventDefault();
+      $('#cancelAddCard').click();
+      return;
+    }
+    if(k === 'enter' && ev.ctrlKey){
+      ev.preventDefault();
+      $('#saveNewCard').click();
+      return;
+    }
+    // Let other keys pass through for typing
+    return;
+  }
+  
+  // Only handle study keys when study interface is visible
+  if(!$('#study')|| $('#study').style.display==='none') return;
   
   // Space: Toggle answer visibility
   if(k===' '){ 

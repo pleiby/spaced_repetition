@@ -17,25 +17,36 @@ A simple, privacy-first spaced repetition flashcard application built as a singl
 
 ## 🚀 Quick Start
 
-1. **Open the Application**
-   - Double-click `tiny_srs_single_file_offline.html`
-   - Or open it in any modern web browser
+### For Individual Use:
+1. **Download the Application**
+   - Save `tiny_srs_single_file_offline.html` to your device
+   - Download desired CSV files from the `CSV-Decks/` folder
 
-2. **Load a Study Deck**
+2. **Open the Application**
+   - Double-click the HTML file or open in any modern web browser
+   - **Mobile**: Transfer to phone and open with Chrome/Firefox
+
+3. **Load a Study Deck**
    - Click "Load CSV deck"
    - Select a CSV file with your study material
-   - Example: Use the included `Data/french_vocabulary_500.csv`
+   - Example: Try `french_vocabulary_500.csv` from Languages folder
 
-3. **Configure Settings** (optional)
+4. **Configure Settings** (optional)
    - ✅ **Fast mode**: Makes 1 day = 1 minute for testing
    - ✅ **Shuffle**: Randomizes card order
    - ⚪ **Auto-reveal**: Shows answers automatically for familiar cards
 
-4. **Start Studying!**
+5. **Start Studying!**
    - Read the question/cue
    - Think of your answer
    - Press **Space** to reveal the correct answer
    - Grade yourself: **1** (Again), **2** (Hard), **3** (Good), **4** (Easy)
+
+### For Shared/Group Use:
+1. **Each person downloads their own copy** of the HTML file to their device
+2. **Share CSV decks** through the common Google Drive folder
+3. **Individual progress** is automatically maintained per device/browser
+4. **Export progress regularly** for personal backup
 
 ## 📋 CSV File Format
 
@@ -293,15 +304,94 @@ Enable "Fast mode" to accelerate time for testing:
 - Reduces clicking for familiar material
 - Can be enabled in settings
 
+## � Mobile Usage
+
+### Android Setup
+1. **Transfer HTML file to your phone:**
+   - Email attachment, Google Drive, or USB transfer
+   - Save to Downloads or easily accessible folder
+
+2. **Access via browser:**
+   - Open Chrome/Firefox → Navigate to file location
+   - Or use file manager → Tap HTML file → "Open with Browser"
+
+3. **Add to Home Screen (optional):**
+   - In Chrome: Menu ⋮ → "Add to Home Screen"
+   - Creates app-like icon for quick access
+
+4. **Load CSV decks:**
+   - Transfer CSV files to phone storage
+   - Use browser's file picker to select decks
+
+### iOS Setup
+1. **Transfer files via:**
+   - AirDrop, iCloud Drive, or email
+   - Save to Files app
+
+2. **Open in Safari:**
+   - Files app → Tap HTML file → Share → Safari
+   - Or copy to Safari's local storage
+
+3. **Add to Home Screen:**
+   - Safari → Share button → "Add to Home Screen"
+
+## 👥 Shared Usage & Collaboration
+
+### Individual Progress Guarantee
+- **Progress is device/browser specific** - each person maintains separate study data
+- **Same CSV files, individual tracking** - everyone can use shared decks with personal progress
+- **No cross-contamination** - User A's progress never affects User B's study session
+
+### Setting Up Shared Access
+1. **Create shared cloud folder** (Google Drive, Dropbox, etc.)
+2. **Include:**
+   - Main HTML application file
+   - Collection of CSV study decks
+   - Setup instructions for different devices
+   - Progress export examples
+
+3. **Each user downloads:**
+   - HTML file to their personal device
+   - Desired CSV decks for study
+   - Maintains individual progress automatically
+
+### Best Practices for Groups
+- **Download, don't stream** - Save files locally for best performance
+- **Regular progress exports** - Backup personal study data
+- **Organize CSV decks by subject** - Languages, Academic, Professional, etc.
+- **Share new decks** - Contribute quality study materials to the group
+- **Use descriptive filenames** - `spanish_verbs_beginner_300words.csv`
+
+### Creating Study Groups
+1. **Shared deck creation** - Collaborate on comprehensive CSV files
+2. **Progress comparison** - Export and compare study statistics
+3. **Motivation tracking** - Share milestones and achievements
+4. **Deck requests** - Request specific subject areas from group members
+
 ## 📁 File Structure
 
 ```
-spaced_repetition/
-├── source/
-│   └── tiny_srs_single_file_offline.html  # Main application
-├── Data/
-│   └── french_vocabulary_500.csv          # Sample study deck
-└── README.md                              # This documentation
+Tiny-SRS-Spaced-Repetition/           # Shared cloud folder
+├── tiny_srs_single_file_offline.html # Main application
+├── README.md                         # This documentation
+├── CSV-Decks/                        # Study materials
+│   ├── Languages/
+│   │   ├── french_vocabulary_500.csv
+│   │   ├── spanish_basics_300.csv
+│   │   └── german_verbs.csv
+│   ├── Academic/
+│   │   ├── biology_terms.csv
+│   │   ├── chemistry_formulas.csv
+│   │   └── history_dates.csv
+│   └── Professional/
+│       ├── medical_terminology.csv
+│       └── programming_concepts.csv
+├── Mobile-Setup/                     # Device-specific guides
+│   ├── android_instructions.md
+│   └── ios_instructions.md
+└── Progress-Examples/                # Backup examples
+    ├── sample_export.json
+    └── backup_guide.md
 ```
 
 ## 🌟 Example Study Decks

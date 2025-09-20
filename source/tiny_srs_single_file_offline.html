@@ -266,6 +266,8 @@ This single-file application contains:
     </label>
     <!-- Export button for backing up study progress -->
     <button class="btn small" id="export">Export progress</button>
+    <!-- User management for shared usage -->
+    <button class="btn small" id="changeUser">Change User</button>
   </header>
 
   <!-- === ABOUT/INSTRUCTIONS CARD === -->
@@ -682,6 +684,21 @@ function grade(g){
   } 
 }
 
+// =============== USER IDENTIFICATION (Optional Enhancement) ===============
+// Get or create user identifier for shared usage scenarios
+function getUserIdentifier(){
+  let userId = localStorage.getItem('tinySRS:userId');
+  if(!userId){
+    // Prompt for user identification on first use
+    userId = prompt('Enter your name or initials for progress tracking (optional):');
+    if(!userId || userId.trim() === ''){
+      userId = 'anonymous_' + Math.random().toString(36).substr(2, 6);
+    }
+    localStorage.setItem('tinySRS:userId', userId.trim());
+  }
+  return userId;
+}
+
 // =============== EVENT HANDLERS ===============
 // File input handler for loading CSV decks
 $('#file').addEventListener('change', async (e)=>{
@@ -698,7 +715,12 @@ $('#file').addEventListener('change', async (e)=>{
   
   // Initialize deck state
   state.name = file.name; 
-  state.deckKey = djb2(text);  // Generate unique deck ID from content
+  
+  // Enhanced deck ID: include user identifier for shared usage
+  const userId = getUserIdentifier();
+  const contentHash = djb2(text);
+  state.deckKey = contentHash + '_' + djb2(userId);  // Unique per user
+  
   state.fast = $('#fast').checked; 
   state.autoshow=$('#autoshow').checked;
   
@@ -717,8 +739,9 @@ $('#file').addEventListener('change', async (e)=>{
   const saved = loadProgress(state.deckKey);
   state.cards = mergeProgress(cards, saved);
   
-  // Update UI
-  $('#deckName').textContent = state.name + ` (key ${state.deckKey.slice(0,6)})`;
+  // Update UI with user context
+  const currentUser = localStorage.getItem('tinySRS:userId') || 'anonymous';
+  $('#deckName').textContent = state.name + ` (${currentUser} - ${state.deckKey.slice(0,6)})`;
   $('#status').style.display = '';
   updateStatus();
   
@@ -777,6 +800,21 @@ $('#export').onclick = ()=>{
   a.download = (state.name||'deck') + '.progress.json'; 
   a.click(); 
   URL.revokeObjectURL(url);
+};
+
+// User management for shared devices
+$('#changeUser').onclick = ()=>{
+  const newUserId = prompt('Enter your name or initials:', localStorage.getItem('tinySRS:userId') || '');
+  if(newUserId && newUserId.trim() !== ''){
+    localStorage.setItem('tinySRS:userId', newUserId.trim());
+    alert(`User changed to: ${newUserId.trim()}\nReload your CSV deck to see your personal progress.`);
+    // Reset UI to force deck reload
+    $('#status').style.display = 'none';
+    $('#study').style.display = 'none';
+    $('#tips').style.display = 'none';
+    state.deckKey = null;
+    state.cards = [];
+  }
 };
 
 // Study interface button handlers

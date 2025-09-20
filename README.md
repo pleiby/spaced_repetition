@@ -2,6 +2,12 @@
 
 A simple, privacy-first spaced repetition flashcard application built as a single HTML file. Study vocabulary, facts, or any question-answer pairs using scientifically-proven spaced repetition algorithms.
 
+## 👥 Authors
+
+**Paul Leiby** & **GitHub Copilot**
+
+*Created through collaborative development: Paul provided the vision, requirements, and design decisions while GitHub Copilot implemented the technical solutions and code.*
+
 ## ✨ Features
 
 - **🔒 Completely Offline**: No servers, no tracking, no internet required

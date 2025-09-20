@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TinySRS Progress Sync Tool</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 800px; 
+            margin: 0 auto; 
+            padding: 20px; 
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { 
+            color: #333; 
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        h2 { 
+            color: #555; 
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 5px;
+        }
+        textarea { 
+            width: 100%; 
+            height: 200px; 
+            font-family: 'Courier New', monospace; 
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            resize: vertical;
+        }
+        button { 
+            padding: 12px 24px; 
+            margin: 10px 5px; 
+            font-size: 16px; 
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .download-btn {
+            background-color: #2196F3;
+        }
+        .download-btn:hover {
+            background-color: #1976D2;
+        }
+        .section { 
+            margin: 30px 0; 
+            padding: 20px; 
+            border: 1px solid #ddd; 
+            border-radius: 5px;
+            background-color: #fafafa;
+        }
+        .info {
+            background-color: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .warning {
+            background-color: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #e8f5e8;
+            border-radius: 5px;
+        }
+        .stat-item {
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 TinySRS Progress Sync Tool</h1>
+        
+        <div class="info">
+            <strong>Purpose:</strong> This tool helps you backup, restore, and sync your TinySRS study progress across devices.
+            Your progress data includes card intervals, repetition counts, and study streaks.
+        </div>
+        
+        <div id="stats" class="stats" style="display: none;">
+            <div class="stat-item">
+                <div class="stat-number" id="deckCount">0</div>
+                <div class="stat-label">Decks</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="cardCount">0</div>
+                <div class="stat-label">Total Cards</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="userCount">0</div>
+                <div class="stat-label">Users</div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>📤 Export Progress</h2>
+            <p>Export your current progress data for backup or sharing:</p>
+            <button onclick="exportData()">📊 Analyze & Export Progress</button>
+            <button onclick="downloadBackup()" class="download-btn">💾 Download Backup File</button>
+            <textarea id="exportArea" placeholder="Exported data will appear here..." readonly></textarea>
+        </div>
+        
+        <div class="section">
+            <h2>📥 Import Progress</h2>
+            <div class="warning">
+                <strong>Warning:</strong> Importing will merge with existing data. Cards with the same deck and user will be updated.
+                Consider exporting current data first as a backup.
+            </div>
+            <p>Paste exported progress data and click import:</p>
+            <textarea id="importArea" placeholder="Paste exported progress data here..."></textarea>
+            <button onclick="importData()">📥 Import Progress</button>
+            <button onclick="clearAllData()" style="background-color: #f44336;">🗑️ Clear All Data</button>
+        </div>
+        
+        <div class="section">
+            <h2>🔧 Advanced Tools</h2>
+            <button onclick="viewRawData()">🔍 View Raw localStorage</button>
+            <button onclick="validateData()">✅ Validate Data Integrity</button>
+            <button onclick="cleanupData()">🧹 Cleanup Old Data</button>
+        </div>
+    </div>
+
+    <script>
+        function analyzeTinySRSData() {
+            const data = {};
+            const stats = { decks: 0, totalCards: 0, users: new Set() };
+            
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith('tinySRS:')) {
+                    const value = localStorage.getItem(key);
+                    data[key] = value;
+                    
+                    if (key === 'tinySRS:userId') {
+                        stats.users.add(value);
+                    } else if (key.startsWith('tinySRS:progress_')) {
+                        stats.decks++;
+                        try {
+                            const progressData = JSON.parse(value);
+                            if (progressData.cards) {
+                                stats.totalCards += progressData.cards.length;
+                            }
+                        } catch (e) {
+                            console.warn('Invalid progress data for key:', key);
+                        }
+                    }
+                }
+            }
+            
+            // Update stats display
+            document.getElementById('deckCount').textContent = stats.decks;
+            document.getElementById('cardCount').textContent = stats.totalCards;
+            document.getElementById('userCount').textContent = stats.users.size;
+            document.getElementById('stats').style.display = stats.decks > 0 ? 'flex' : 'none';
+            
+            return { data, stats };
+        }
+        
+        function exportData() {
+            const result = analyzeTinySRSData();
+            const exportJson = JSON.stringify(result.data, null, 2);
+            document.getElementById('exportArea').value = exportJson;
+            
+            if (result.stats.decks === 0) {
+                alert('No TinySRS data found. Make sure you have studied some decks first.');
+            } else {
+                alert(`Export ready! Found ${result.stats.decks} decks with ${result.stats.totalCards} total cards for ${result.stats.users.size} users.`);
+            }
+        }
+        
+        function downloadBackup() {
+            const result = analyzeTinySRSData();
+            if (result.stats.decks === 0) {
+                alert('No data to backup. Study some decks first!');
+                return;
+            }
+            
+            const backup = JSON.stringify(result.data, null, 2);
+            const blob = new Blob([backup], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            
+            const now = new Date();
+            const dateStr = now.toISOString().split('T')[0];
+            const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-');
+            
+            a.download = `tinysrs-backup-${dateStr}-${timeStr}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        function importData() {
+            const jsonString = document.getElementById('importArea').value.trim();
+            if (!jsonString) {
+                alert('Please paste some data to import.');
+                return;
+            }
+            
+            try {
+                const data = JSON.parse(jsonString);
+                let imported = 0;
+                let updated = 0;
+                
+                for (const [key, value] of Object.entries(data)) {
+                    if (key.startsWith('tinySRS:')) {
+                        const existing = localStorage.getItem(key);
+                        localStorage.setItem(key, value);
+                        
+                        if (existing) {
+                            updated++;
+                        } else {
+                            imported++;
+                        }
+                    }
+                }
+                
+                alert(`Import successful!\nNew items: ${imported}\nUpdated items: ${updated}`);
+                analyzeTinySRSData(); // Refresh stats
+            } catch (error) {
+                alert('Error importing data: ' + error.message + '\n\nPlease check that the data is valid JSON.');
+            }
+        }
+        
+        function clearAllData() {
+            if (!confirm('Are you sure you want to DELETE ALL TinySRS data?\n\nThis action cannot be undone!')) {
+                return;
+            }
+            
+            if (!confirm('Final confirmation: This will delete all your study progress, user data, and deck progress. Continue?')) {
+                return;
+            }
+            
+            const keysToDelete = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith('tinySRS:')) {
+                    keysToDelete.push(key);
+                }
+            }
+            
+            keysToDelete.forEach(key => localStorage.removeItem(key));
+            
+            alert(`Deleted ${keysToDelete.length} items from localStorage.`);
+            document.getElementById('exportArea').value = '';
+            document.getElementById('importArea').value = '';
+            analyzeTinySRSData(); // Refresh stats
+        }
+        
+        function viewRawData() {
+            let output = 'Raw localStorage data:\n\n';
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith('tinySRS:')) {
+                    const value = localStorage.getItem(key);
+                    output += `${key}:\n${value}\n\n`;
+                }
+            }
+            
+            if (output === 'Raw localStorage data:\n\n') {
+                alert('No TinySRS data found in localStorage.');
+            } else {
+                const newWindow = window.open('', '_blank');
+                newWindow.document.write(`<pre style="font-family: monospace; white-space: pre-wrap; padding: 20px;">${output}</pre>`);
+            }
+        }
+        
+        function validateData() {
+            let valid = 0;
+            let invalid = 0;
+            const errors = [];
+            
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith('tinySRS:progress_')) {
+                    try {
+                        const data = JSON.parse(localStorage.getItem(key));
+                        if (data.cards && Array.isArray(data.cards)) {
+                            valid++;
+                        } else {
+                            invalid++;
+                            errors.push(`${key}: Missing or invalid cards array`);
+                        }
+                    } catch (e) {
+                        invalid++;
+                        errors.push(`${key}: Invalid JSON - ${e.message}`);
+                    }
+                }
+            }
+            
+            let message = `Validation Results:\n✅ Valid decks: ${valid}\n❌ Invalid decks: ${invalid}`;
+            if (errors.length > 0) {
+                message += '\n\nErrors found:\n' + errors.join('\n');
+            }
+            
+            alert(message);
+        }
+        
+        function cleanupData() {
+            // Remove any malformed or empty progress entries
+            let cleaned = 0;
+            const keysToRemove = [];
+            
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith('tinySRS:progress_')) {
+                    try {
+                        const data = JSON.parse(localStorage.getItem(key));
+                        if (!data.cards || !Array.isArray(data.cards) || data.cards.length === 0) {
+                            keysToRemove.push(key);
+                        }
+                    } catch (e) {
+                        keysToRemove.push(key);
+                    }
+                }
+            }
+            
+            keysToRemove.forEach(key => {
+                localStorage.removeItem(key);
+                cleaned++;
+            });
+            
+            alert(`Cleanup complete! Removed ${cleaned} invalid or empty entries.`);
+            analyzeTinySRSData(); // Refresh stats
+        }
+        
+        // Initialize stats on page load
+        window.onload = function() {
+            analyzeTinySRSData();
+        };
+    </script>
+</body>
+</html>

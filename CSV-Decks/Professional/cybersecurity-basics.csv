@@ -1,0 +1,21 @@
+front,back
+What does TCP stand for?,Transmission Control Protocol
+What does IP stand for?,Internet Protocol
+What does DNS stand for?,Domain Name System
+What does HTTP stand for?,HyperText Transfer Protocol
+What does HTTPS stand for?,HyperText Transfer Protocol Secure
+What is a firewall?,Security system that monitors and controls network traffic
+What is encryption?,Process of converting data into coded format to prevent unauthorized access
+What is a VPN?,Virtual Private Network - creates secure connection over public network
+What does SSL stand for?,Secure Sockets Layer
+What is malware?,Malicious software designed to damage or gain unauthorized access
+What is phishing?,Fraudulent attempt to obtain sensitive information by impersonating trustworthy entity
+What is two-factor authentication?,Security process requiring two different authentication factors
+What is a DDoS attack?,Distributed Denial of Service - overwhelming target with traffic
+What is SQL injection?,Code injection attack targeting database-driven applications
+What is social engineering?,Manipulation of people to divulge confidential information
+What is a zero-day exploit?,Attack that takes advantage of previously unknown vulnerability
+What is the principle of least privilege?,Users should have minimum access rights needed for their job
+What is a vulnerability assessment?,Process of identifying security weaknesses in systems
+What is incident response?,Organized approach to handling security breaches or attacks
+What is network segmentation?,Dividing network into smaller segments to improve security and performance

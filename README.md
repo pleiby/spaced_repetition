@@ -6,7 +6,7 @@ A simple, privacy-first spaced repetition flashcard application built as a singl
 
 **Paul Leiby** & **GitHub Copilot**
 
-*Created through collaborative development: Paul provided the vision, requirements, and design decisions while GitHub Copilot implemented the technical solutions and code.*
+*Created through collaborative development: Paul Leiby provided the vision, requirements, and technical design decisions while GitHub Copilot implemented many technical solutions and code.*
 
 ## ✨ Features
 
